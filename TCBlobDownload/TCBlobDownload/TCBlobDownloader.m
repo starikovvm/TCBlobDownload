@@ -252,7 +252,15 @@ NSString * const TCBlobDownloadErrorHTTPStatusKey = @"TCBlobDownloadErrorHTTPSta
           (long) self.receivedDataLength, (long) self.expectedDataLength);
 
     if (self.receivedDataBuffer.length > kBufferSize && [self isExecuting]) {
-        [self.file writeData:self.receivedDataBuffer];
+        @try {
+            [self.file writeData:self.receivedDataBuffer];
+        } @catch (NSException *exception) {
+            [self cancel];
+            NSError *error = [NSError errorWithDomain:TCBlobDownloadErrorDomain
+                                        code:TCBlobDownloadErrorNotEnoughFreeDiskSpace
+                                    userInfo:@{ NSLocalizedDescriptionKey:@"Not enough free disk space" }];
+            [self notifyFromCompletionWithError:error pathToFile:self.pathToFile];
+        }
         [self.receivedDataBuffer setData:nil];
     }
 
@@ -272,7 +280,15 @@ NSString * const TCBlobDownloadErrorHTTPStatusKey = @"TCBlobDownloadErrorHTTPSta
 - (void)connectionDidFinishLoading:(NSURLConnection*)connection
 {
     if ([self isExecuting]) {
-        [self.file writeData:self.receivedDataBuffer];
+        @try {
+            [self.file writeData:self.receivedDataBuffer];
+        } @catch (NSException *exception) {
+            [self cancel];
+            NSError *error = [NSError errorWithDomain:TCBlobDownloadErrorDomain
+                                                 code:TCBlobDownloadErrorNotEnoughFreeDiskSpace
+                                             userInfo:@{ NSLocalizedDescriptionKey:@"Not enough free disk space" }];
+            [self notifyFromCompletionWithError:error pathToFile:self.pathToFile];
+        }
         [self.receivedDataBuffer setData:nil];
         
         [self notifyFromCompletionWithError:nil pathToFile:self.pathToFile];
